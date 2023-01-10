@@ -12,6 +12,10 @@ use wry::{
     webview::WebViewBuilder,
 };
 
+// enum UserEvent {
+//     NewWindow(String),
+// }
+
 #[cfg(target_os = "macos")]
 use wry::application::{
     accelerator::{Accelerator, SysMods},
@@ -82,8 +86,10 @@ fn main() -> wry::Result<()> {
         fullscreen,
         ..
     } = get_windows_config().1.unwrap_or_default();
-    let event_loop = EventLoop::new();
 
+    // let event_loop: EventLoop<UserEvent> = EventLoop::with_user_event();
+    // let proxy = event_loop.create_proxy();
+    let event_loop = EventLoop::new();
     let common_window = WindowBuilder::new()
         .with_title("")
         .with_resizable(resizable)
@@ -93,9 +99,14 @@ fn main() -> wry::Result<()> {
             None
         })
         .with_inner_size(wry::application::dpi::LogicalSize::new(width, height));
+
     #[cfg(target_os = "windows")]
     let window = {
-        let icon_path = format!("png/{}_32.ico", package_name);
+        let mut icon_path = format!("png/{}_32.ico", package_name);
+        // 假如没有设置，就使用默认的即可
+        if !std::path::Path::new(&icon_path).exists() {
+            icon_path = "png/icon_32.ico".to_string();
+        }
         let icon = load_icon(std::path::Path::new(&icon_path));
         common_window
             .with_decorations(true)
@@ -121,11 +132,8 @@ fn main() -> wry::Result<()> {
         if req == "drag_window" {
             let _ = window.drag_window();
         } else if req == "fullscreen" {
-            if window.fullscreen().is_some() {
-                window.set_fullscreen(None);
-            } else {
-                window.set_fullscreen(Some(Fullscreen::Borderless(None)));
-            }
+            let is_maximized = window.is_maximized();
+            window.set_maximized(!is_maximized);
         } else if req.starts_with("open_browser") {
             let href = req.replace("open_browser:", "");
             webbrowser::open(&href).expect("no browser");
@@ -143,6 +151,10 @@ fn main() -> wry::Result<()> {
             .with_devtools(cfg!(feature = "devtools"))
             .with_initialization_script(include_str!("pake.js"))
             .with_ipc_handler(handler)
+            // .with_new_window_req_handler(move |uri: String| {
+            //     let submitted = proxy.send_event(UserEvent::NewWindow(uri.clone())).is_ok();
+            //     submitted
+            // })
             .with_back_forward_navigation_gestures(true)
             .build()?
     };
@@ -173,6 +185,10 @@ fn main() -> wry::Result<()> {
             .with_initialization_script(include_str!("pake.js"))
             .with_ipc_handler(handler)
             .with_web_context(&mut web_content)
+            // .with_new_window_req_handler(move |uri: String| {
+            //     let submitted = proxy.send_event(UserEvent::NewWindow(uri.clone())).is_ok();
+            //     submitted
+            // })
             .build()?
     };
     #[cfg(feature = "devtools")]
@@ -201,6 +217,9 @@ fn main() -> wry::Result<()> {
                 println!("Clicked on {:?}", menu_id);
                 println!("Clicked on {:?}", webview.window().is_visible());
             }
+            // Event::UserEvent(UserEvent::NewWindow(uri)) => {
+            //     webbrowser::open(&uri).expect("no browser");
+            // }
             _ => (),
         }
     });

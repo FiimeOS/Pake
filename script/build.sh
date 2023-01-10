@@ -45,7 +45,6 @@ if [[ "$OSTYPE" =~ ^linux ]]; then
     # for linux, package name may be com.xxx.xxx
     echo "rename package name"
     export desktop_file="src-tauri/assets/${package_prefix}.weread.desktop"
-    # sed -i "s/\"productName\": \"weread\"/\"productName\": \"${package_prefix}-weread\"/g" src-tauri/tauri.conf.json
     $sd "\"productName\": \"WeRead\"" "\"productName\": \"${package_prefix}-weread\"" src-tauri/tauri.conf.json
 fi
 
@@ -104,13 +103,20 @@ do
         npm run tauri build
         mv src-tauri/target/release/bundle/deb/${package_prefix}-${package_name}*.deb output/linux/${package_title}_amd64.deb
         mv src-tauri/target/release/bundle/appimage/${package_prefix}-${package_name}*.AppImage output/linux/${package_title}_amd64.AppImage
+        echo clear cache
+        rm src-tauri/target/release
+        rm -rf src-tauri/target/release/bundle
+
     fi
 
     if [[ "$OSTYPE" =~ ^darwin ]]; then
 
         npm run tauri build -- --target universal-apple-darwin
-        # mv src-tauri/target/release/bundle/dmg/*.dmg output/macos/${package_title}_x64.dmg
         mv src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg output/macos/${package_title}.dmg
+        echo clear cache
+        rm -rf src-tauri/target/universal-apple-darwin
+        rm src-tauri/target/aarch64-apple-darwin/release
+        rm src-tauri/target/x86_64-apple-darwin/release
     fi
 
     echo "package build success!"
@@ -119,4 +125,3 @@ done
 
 echo "build all package success!"
 echo "you run 'rm src-tauri/assets/*.desktop && git checkout src-tauri' to recovery code"
-# rm src-tauri/assets/*.desktop && git checkout src-tauri
